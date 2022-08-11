@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  mariadb:
+    image: mariadb
+    container_name: mariadb
+    restart: always
+    environment:
+      MYSQL_DATABASE: "${DB_NAME}"
+      MYSQL_ROOT_USER: "${DB_USER}"
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+    ports:
+      - 3030
+    volumes:
+      - data:/var/lib/mysql
+
+  bedrock:
+    build:
+      context: .
+      dockerfile: ./build/bedrock/Dockerfile
+    container_name: bedrock
+    restart: always
+    links:
+      - mariadb
+    env_file: .env
+    volumes:
+      - web:/srv/bedrock/web
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./build/nginx/Dockerfile
+    container_name: nginx
+    restart: always
+    links:
+      - bedrock
+    depends_on:
+      - bedrock
+    ports:
+      - 80:80
+    volumes:
+      - web:/srv/bedrock/web
+
+volumes:
+  data:
+  web:
