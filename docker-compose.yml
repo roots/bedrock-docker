@@ -7,7 +7,6 @@ services:
     restart: always
     environment:
       MYSQL_DATABASE: "${DB_NAME}"
-      MYSQL_ROOT_USER: "${DB_USER}"
       MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
     ports:
       - 3030
@@ -17,30 +16,16 @@ services:
   bedrock:
     build:
       context: .
-      dockerfile: ./build/bedrock/Dockerfile
+      dockerfile: ./build/bedrock.dockerfile
     container_name: bedrock
     restart: always
     links:
       - mariadb
-    env_file: .env
-    volumes:
-      - web:/srv/bedrock/web
-
-  nginx:
-    build:
-      context: .
-      dockerfile: ./build/nginx/Dockerfile
-    container_name: nginx
-    restart: always
-    links:
-      - bedrock
-    depends_on:
-      - bedrock
     ports:
       - 80:80
+    env_file: .env
     volumes:
-      - web:/srv/bedrock/web
+      - ./bedrock:/srv/bedrock
 
 volumes:
   data:
-  web:
