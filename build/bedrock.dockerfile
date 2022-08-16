@@ -1,74 +1,87 @@
 FROM php:8.0-fpm as base
+LABEL name=bedrock
+LABEL intermediate=true
 
-RUN apt-get update && apt-get install -y gnupg \
+# Install essential packages
+RUN apt-get update \
+  && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    gnupg \
+    less \
+    nano \
+    vim \
+    unzip \
+    zip \
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/* \
   && apt-get clean
 
-# Install node
-RUN curl -sL https://deb.nodesource.com/setup_16.x | bash \
-  && apt-get install nodejs -yq \
-  && npm install -g yarn
+FROM base as php
+LABEL name=bedrock
+LABEL intermediate=true
 
-FROM base as roots-php
-
-# Install php extensions
+# Install php extensions and related packages
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 RUN chmod +x /usr/local/bin/install-php-extensions && sync \
- && install-php-extensions \
-  @composer \
-  exif \
-  gd \ 
-  mbstring \
-  memcached \
-  mysqli \
-  pcntl \
-  pdo_mysql \
-  zip
-
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl \
-    git \
-    less \
+  && install-php-extensions \
+    @composer \
+    exif \
+    gd \ 
+    memcached \
+    mysqli \
+    pcntl \
+    pdo_mysql \
+    zip \
+  && apt-get update \
+  && apt-get install -y \
+    gifsicle \
+    jpegoptim \
     libpng-dev \
     libjpeg62-turbo-dev \
     libfreetype6-dev \
-    locales \
-    supervisor \
-    zip \
-    jpegoptim optipng pngquant gifsicle \
-    unzip \
-    lua-zlib-dev \
     libmemcached-dev \
-    nginx \
+    locales \
+    lua-zlib-dev \
+    optipng \
+    pngquant \
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/* \
-  apt-get clean
+  && apt-get clean
 
-FROM roots-php as roots-bedrock
+FROM php as bedrock
+LABEL name=bedrock
 
-WORKDIR /srv
+# Install nginx & supervisor
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash \
+  && apt-get update \
+  && apt-get install -y \
+    nginx \
+    nodejs \
+    supervisor \
+  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+  && rm -rf /var/lib/apt/lists/* \
+  && apt-get clean \
+  && npm install -g yarn
 
-# Copy configs
-COPY ./build/supervisor/supervisord.conf /etc/supervisord.conf
-COPY ./build/php/8.0/fpm/pool.d /etc/php/8.0/fpm/pool.d
+# Configure nginx, php-fpm and supervisor
 COPY ./build/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY ./build/nginx/sites-enabled /etc/nginx/conf.d
 COPY ./build/nginx/sites-enabled /etc/nginx/sites-enabled
+COPY ./build/php/8.0/fpm/pool.d /etc/php/8.0/fpm/pool.d
+COPY ./build/supervisor/supervisord.conf /etc/supervisord.conf
 
 # WordPress CLI
+# Uses a wrapper script to sidestep permissions complexities
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
   && chmod +x wp-cli.phar \
   && mv wp-cli.phar /usr/bin/_wp;
-
-# Passthrough WordPress CLI wrapper (to avoid permissions complexities)
 COPY ./build/bin/wp.sh /srv/wp.sh
-RUN chmod +x /srv/wp.sh
-RUN cp /srv/wp.sh /usr/bin/wp
+RUN chmod +x /srv/wp.sh \
+  && mv /srv/wp.sh /usr/bin/wp
 
-# Installer / entrypoint
+# Installation helper
 COPY ./build/bin/bedrock-install.sh /srv/bedrock-install.sh
 RUN chmod +x /srv/bedrock-install.sh
 
