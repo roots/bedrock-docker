@@ -1,6 +1,16 @@
-FROM php:8.0-fpm
+FROM php:8.0-fpm as base
 
-WORKDIR /srv
+RUN apt-get update && apt-get install -y gnupg \
+  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+  && rm -rf /var/lib/apt/lists/* \
+  && apt-get clean
+
+# Install node
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash \
+  && apt-get install nodejs -yq \
+  && npm install -g yarn
+
+FROM base as roots-php
 
 # Install php extensions
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
@@ -32,10 +42,14 @@ RUN apt-get update && apt-get install -y \
     unzip \
     lua-zlib-dev \
     libmemcached-dev \
-    nginx &&\
-  apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false &&\
-  rm -rf /var/lib/apt/lists/* &&\
+    nginx \
+  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+  && rm -rf /var/lib/apt/lists/* \
   apt-get clean
+
+FROM roots-php as roots-bedrock
+
+WORKDIR /srv
 
 # Copy configs
 COPY ./build/supervisor/supervisord.conf /etc/supervisord.conf
@@ -45,9 +59,9 @@ COPY ./build/nginx/sites-enabled /etc/nginx/conf.d
 COPY ./build/nginx/sites-enabled /etc/nginx/sites-enabled
 
 # WordPress CLI
-RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar &&\
-  chmod +x wp-cli.phar &&\
-  mv wp-cli.phar /usr/bin/_wp;
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+  && chmod +x wp-cli.phar \
+  && mv wp-cli.phar /usr/bin/_wp;
 
 # Passthrough WordPress CLI wrapper (to avoid permissions complexities)
 COPY ./build/bin/wp.sh /srv/wp.sh
@@ -59,5 +73,5 @@ COPY ./build/bin/bedrock-install.sh /srv/bedrock-install.sh
 RUN chmod +x /srv/bedrock-install.sh
 
 WORKDIR /srv/bedrock
-EXPOSE 80
+EXPOSE 80 3000
 CMD ["/srv/bedrock-install.sh"]
