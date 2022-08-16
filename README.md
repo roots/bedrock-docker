@@ -3,6 +3,6 @@
 Try it:
 
 ```sh
-./.dev.sh
+./dev.sh
 docker compose up --build
 ```
