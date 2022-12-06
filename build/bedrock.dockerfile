@@ -73,7 +73,6 @@ COPY ./build/php/8.0/fpm/pool.d /etc/php/8.0/fpm/pool.d
 COPY ./build/supervisor/supervisord.conf /etc/supervisord.conf
 
 # WordPress CLI
-# Uses a wrapper script to sidestep permissions complexities
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
   && chmod +x wp-cli.phar \
   && mv wp-cli.phar /usr/bin/_wp;
@@ -86,5 +85,4 @@ COPY ./build/bin/bedrock-install.sh /srv/bedrock-install.sh
 RUN chmod +x /srv/bedrock-install.sh
 
 WORKDIR /srv/bedrock
-EXPOSE 80 3000
 CMD ["/srv/bedrock-install.sh"]
