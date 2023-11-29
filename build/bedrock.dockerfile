@@ -22,7 +22,7 @@ FROM base as php
 LABEL name=bedrock
 LABEL intermediate=true
 
-# Install php extensions and related packages
+# Install php extensions including xdebug and related packages
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 RUN chmod +x /usr/local/bin/install-php-extensions && sync \
   && install-php-extensions \
@@ -50,6 +50,10 @@ RUN chmod +x /usr/local/bin/install-php-extensions && sync \
   && rm -rf /var/lib/apt/lists/* \
   && apt-get clean
 
+# Install xdebug
+RUN pecl install xdebug \
+  && docker-php-ext-enable xdebug
+
 FROM php as bedrock
 LABEL name=bedrock
 
@@ -68,22 +72,13 @@ RUN apt-get update \
   && apt-get clean \
   && npm install -g yarn
 
-# RUN curl -sL https://deb.nodesource.com/setup_16.x | bash \
-#   && apt-get update \
-#   && apt-get install -y \
-#     nginx \
-#     nodejs \
-#     supervisor \
-#   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-#   && rm -rf /var/lib/apt/lists/* \
-#   && apt-get clean \
-#   && npm install -g yarn
-
 # Configure nginx, php-fpm and supervisor
 COPY ./build/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY ./build/nginx/sites-enabled /etc/nginx/conf.d
 COPY ./build/nginx/sites-enabled /etc/nginx/sites-enabled
 COPY ./build/php/8.2/fpm/pool.d /etc/php/8.2/fpm/pool.d
+COPY ./build/php/8.2/conf.d/xdebug.ini /etc/php/conf.d/xdebug.ini
+COPY ./build/php/8.2/conf.d/error_reporting.ini /etc/php/conf.d/error_reporting.ini
 COPY ./build/supervisor/supervisord.conf /etc/supervisord.conf
 
 # WordPress CLI
