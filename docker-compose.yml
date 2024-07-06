@@ -1,15 +1,14 @@
 version: '3.9'
-
 services:
   mariadb:
     image: mariadb
     container_name: mariadb
     restart: always
     environment:
-      MYSQL_DATABASE: '${DB_NAME}'
-      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_DATABASE: 'wordpress'
+      MYSQL_ROOT_PASSWORD: 'rootpassword'
     ports:
-      - 3030
+      - "3532:3306"  # Changed to standard MySQL port for easier debugging
     volumes:
       - data:/var/lib/mysql
 
@@ -19,11 +18,18 @@ services:
       dockerfile: ./build/bedrock.dockerfile
     container_name: bedrock
     restart: always
-    links:
+    depends_on:
       - mariadb
     ports:
-      - 80:80
-    env_file: .env
+      - "8530:80"
+    environment:
+      DB_NAME: 'wordpress'
+      DB_USER: 'root'
+      DB_PASSWORD: 'rootpassword'
+      DB_HOST: 'mariadb'
+      WP_ENV: 'development'
+      WP_HOME: 'http://localhost'
+      WP_SITEURL: 'http://localhost/wp'
     volumes:
       - ./bedrock:/srv/bedrock
 
