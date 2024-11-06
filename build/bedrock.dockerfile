@@ -1,4 +1,4 @@
-FROM php:8.0-fpm as base
+FROM php:8.2-fpm as base
 LABEL name=bedrock
 LABEL intermediate=true
 
@@ -54,7 +54,7 @@ FROM php as bedrock
 LABEL name=bedrock
 
 # Install nginx & supervisor
-RUN curl -sL https://deb.nodesource.com/setup_16.x | bash \
+RUN curl -sL https://deb.nodesource.com/setup_20.x | bash \
   && apt-get update \
   && apt-get install -y \
     nginx \
@@ -69,7 +69,7 @@ RUN curl -sL https://deb.nodesource.com/setup_16.x | bash \
 COPY ./build/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY ./build/nginx/sites-enabled /etc/nginx/conf.d
 COPY ./build/nginx/sites-enabled /etc/nginx/sites-enabled
-COPY ./build/php/8.0/fpm/pool.d /etc/php/8.0/fpm/pool.d
+COPY ./build/php/8.2/fpm/pool.d /etc/php/8.2/fpm/pool.d
 COPY ./build/supervisor/supervisord.conf /etc/supervisord.conf
 
 # WordPress CLI
